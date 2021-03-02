@@ -143,7 +143,8 @@ class Dialog(tk.Frame):
                                                             'msg': self.msg_entry.get(),
                                                            }))
         btn_column.grid(column=1, row=2,sticky="E")
-
+        self.st.tag_config('name', foreground='green')
+        self.st.tag_config('msg', foreground='red')
     def set_data(self, data):
         self.client = Client(data['username'], data['server'], data['port'])
         self.client.listen(self.handle)
@@ -154,13 +155,11 @@ class Dialog(tk.Frame):
     def handle(self, msg):
         def append():
             self.st.configure(state='normal')
-            self.st.insert(tk.END, msg + '\n')
+            self.st.insert(tk.END, msg + '\n', 'msg')
             self.st.configure(state='disabled')
             self.st.yview(tk.END)
         self.st.after(0, append)
 
 if __name__ == "__main__":
-    myappid = 'quentin.morpion.game.5' # arbitrary string
-    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     app = tkinterApp()
     app.mainloop()
