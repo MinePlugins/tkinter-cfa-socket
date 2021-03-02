@@ -3,22 +3,31 @@ from tkinter import ttk
 from client import Client
 from tkinter import scrolledtext
 import tkinter.font
+import ctypes
+
 sombre = '#1e1e1e'
 clair =  "#323233"
 text_clair = '#ecf0f1' 
 text_hightlight = '#ffffff'
 
-helv36 = tk.font.Font(family="Helvetica",size=36,weight="bold")
 
 class tkinterApp(tk.Tk):
      
     def __init__(self, *args, **kwargs): 
-         
         tk.Tk.__init__(self, *args, **kwargs)
         container = tk.Frame(self, bg=clair)  
         self.update_idletasks()
+        self.attributes("-topmost", True)
+        top = tkinter.Toplevel(self)
+        top.iconbitmap(default='applications_games.ico')
+        top.title("Morpion")
+        top.attributes("-alpha",0.0)
+        def onRootIconify(event): top.withdraw()
+        self.bind("<Unmap>", onRootIconify)
+        def onRootDeiconify(event): top.deiconify()
+        self.bind("<Map>", onRootDeiconify)
         self.overrideredirect(True)
-        self.geometry('800x600+200+200')
+        self.geometry('1200x480+200+200')
         title_bar = tk.Frame(self, bg='#323233', relief='flat', bd=0)
         close_button = tk.Button(title_bar, 
                                     bd=0, 
@@ -64,12 +73,14 @@ class tkinterApp(tk.Tk):
     def move_window(self, event):
         self.geometry('+{0}+{1}'.format(event.x_root, event.y_root))
 
+
 class StartPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent, bg=sombre)
+        helv36 = tk.font.Font(family="Helvetica",size=14,weight="bold")
         self.controller = controller
         connection_text = tk.Label(self, text="Information de connection",font=helv36, bg=sombre, fg=text_clair)
-        connection_text.grid(column=1, row=0)
+        connection_text.grid(column=1, columnspan=2, row=0)
         user_name_label = tk.Label(self, text="User Name",bg=sombre, fg=text_clair)
         user_name_label.grid(column=1, row=1)
         self.user_name_entry = tk.Entry(self, bg=clair, fg=text_clair, relief="flat", insertbackground=text_clair)
@@ -101,7 +112,7 @@ class StartPage(tk.Frame):
                                                                     'port':     int(self.port_entry.get())
                                                                     }))
                                     
-        btn_column.grid(column=2,sticky="E")
+        btn_column.grid(column=1, row=4, columnspan=2,sticky="SEW")
 
     def send_text(self, text):
         self.controller.frames[Dialog].set_data(text)
@@ -109,16 +120,26 @@ class StartPage(tk.Frame):
 
 class Dialog(tk.Frame):
     def __init__(self, parent, controller):
-        tk.Frame.__init__(self, parent)
+        tk.Frame.__init__(self, parent,bg=sombre)
         self.controller = controller
         rectangle_1 = tk.Label(self, text="Plateau de Jeux", bg="green", fg="white")
         rectangle_1.grid(column=0, row=1, ipadx=200, ipady=200, sticky="NSEW")
-        self.st = scrolledtext.ScrolledText(self, state='disabled')
+        self.st = scrolledtext.ScrolledText(self, state='disabled',bg=sombre, fg=text_hightlight)
         self.st.configure(font='TkFixedFont')
-        self.st.grid(column=1, row=1, sticky='W', ipadx=10, ipady=10)
-        self.msg_entry = ttk.Entry(self)
+        self.st.grid(column=1, row=1, sticky='NSEW', ipadx=10, ipady=10)
+        self.msg_entry = tk.Entry(self, bg=clair, fg=text_clair, relief="flat", insertbackground=text_clair)
         self.msg_entry.grid(column=1, row=2,sticky="W", ipadx=50)
-        btn_column = ttk.Button(self, text="Send ➡️", command=lambda: self.send_msg({
+        btn_column = tk.Button(self, 
+                                text="Send ->", 
+                                bg=clair, 
+                                fg=text_clair, 
+                                activebackground=clair,
+                                activeforeground=text_clair,
+                                bd=0,
+                                overrelief='flat',
+                                highlightcolor=text_hightlight,
+                                relief="flat",
+                                command=lambda: self.send_msg({
                                                             'msg': self.msg_entry.get(),
                                                            }))
         btn_column.grid(column=1, row=2,sticky="E")
@@ -139,5 +160,7 @@ class Dialog(tk.Frame):
         self.st.after(0, append)
 
 if __name__ == "__main__":
+    myappid = 'quentin.morpion.game.5' # arbitrary string
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
     app = tkinterApp()
     app.mainloop()
