@@ -49,12 +49,15 @@ class Client():
         else:
             self.handler(data)
 
+
+def handle(msg):
+    print(msg)
 if __name__ == "__main__":
     username= input("username: ")
     server= input("server: ")
     port= int(input("port: "))
     client= Client(username, server, port)
-    client.listen()
+    client.listen(handle)
     message= ""
     while message!="QUIT":
         message= input()
