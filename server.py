@@ -44,7 +44,7 @@ class Server():
         self.clients_sockets.remove(socket)
 
     def echo(self, data):
-        print("echoing:", data)
+        print(data)
         for sock in self.clients_sockets:
             try:
                 sock.sendall(data.encode("UTF-8"))

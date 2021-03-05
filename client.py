@@ -2,14 +2,22 @@ import threading
 import socket
 import time
 import re
-
+import json
+from random import randint
 class Client():
 
     def __init__(self, username, server, port):
         self.socket= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((server, port))
-        self.username= username
-        self.send("USERNAME {0}".format(username))
+        self.username = username
+        self.election = randint(1, 1000)
+        join_payload = {
+            'type': 'join',
+            'data': {
+                'election': self.election,
+            },
+        }
+        self.send(join_payload)
         self.listening= True
 
     def listener(self):
@@ -30,10 +38,12 @@ class Client():
 
     def send(self, message):
         try:
-            username_result = re.search('^USERNAME (.*)$', message)
-            if not username_result:
-                message= "{0}: {1}".format(self.username, message)
-            self.socket.sendall(message.encode("UTF-8"))
+            data = {
+                'username': self.username,
+                'message':message
+            }   
+            print(message)
+            self.socket.sendall(json.dumps(data).encode("UTF-8"))
         except socket.error:
             print("unable to send message")
 
@@ -52,6 +62,7 @@ class Client():
 
 def handle(msg):
     print(msg)
+    
 if __name__ == "__main__":
     username= input("username: ")
     server= input("server: ")

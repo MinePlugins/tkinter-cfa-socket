@@ -4,11 +4,13 @@ from client import Client
 from tkinter import scrolledtext
 import tkinter.font
 import ctypes
+import json
 import configparser # Fichier de configuration
 
 #
 # Lecture de la configuration
 #
+COLUNM_REF = ['a','b','c','d','e','f','g','h','i','j']
 
 config = configparser.ConfigParser()
 config.read('config.ini')
@@ -132,8 +134,10 @@ class Dialog(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent,bg=color_sombre)
         self.controller = controller
-        rectangle_1 = tk.Label(self, text="Plateau de Jeux", bg="green", fg="white")
-        rectangle_1.grid(column=0, row=1, ipadx=200, ipady=200, sticky="NSEW")
+        self.battleship_grid_tk = tk.Canvas(self, width=440, height=440,  bd=0, highlightthickness=0, bg="#010101", relief="flat")
+        self.battleship_grid_tk.grid(column=0, row=1, sticky="NSEW")
+
+        self.create_grid()
         self.st = scrolledtext.ScrolledText(self, state='disabled',bg=color_sombre, fg=color_text_hightlight)
         self.st.configure(font='TkFixedFont')
         self.st.grid(column=1, row=1, sticky='NSEW', ipadx=10, ipady=10)
@@ -153,22 +157,112 @@ class Dialog(tk.Frame):
                                                             'msg': self.msg_entry.get(),
                                                            }))
         btn_column.grid(column=1, row=2,sticky="E")
-        self.st.tag_config('name', foreground='green')
-        self.st.tag_config('msg', foreground='red')
+        self.st.tag_config('name', foreground='orange')
+        self.st.tag_config('you', foreground='#2980b9')
+        self.st.tag_config('msg', foreground='#3498db')
+    # def create_boat(self):
+    #     self.battleship_grid_tk.tag_bind(key,"<ButtonPress-1>",lambda e, key=key: self.move_selected(e.x, e.y, key, 0))
+    #     self.battleship_grid_tk.tag_bind(key,"<Button1-Motion>",lambda e, key=key: self.move_selected(e.x, e.y, key, 0))
+    #     self.battleship_grid_tk.tag_bind(key,"<Button1-Motion>",lambda e, key=key: self.move_selected(e.x, e.y, key, 0))
+    def create_grid(self):
+        self.battleship_grid = []
+        for index_x,letter in enumerate(COLUNM_REF):
+            self.battleship_grid_tk.create_text((index_x*40)+40, 8, fill="#37f122", text=letter.capitalize())
+            self.battleship_grid_tk.create_text(8, (index_x*40)+40, fill="#37f122", text=index_x)
+            line = []
+            for index_y,number in enumerate(range(0,10)):
+                print((index_y*40)+40)
+                print((index_x*40)+40)
+                key = "{}{}".format(letter,number)
+                case = {
+                    'name': key,
+                    'type': None,
+                    'canva': self.battleship_grid_tk.create_rectangle((index_x*40)+19, (index_y*40)+19, (index_x*40)+40+19, (index_y*40)+40+19, fill="#010101",outline='#37f122', tags=key)
+                }
+                line.append(case)
+                # self.battleship_grid_tk.tag_bind(key,"<Button-1>",lambda event, key=key: self.clicked(key))
+            self.battleship_grid.append(line)
+
+    def move_selected(self, x1, y1, key, min_pixels=5):
+        column, line, canva = self.determine_pos_from_key(key)
+        print(canva)
+        clic=x1, y1
+        nearest = self.battleship_grid_tk.find_closest(*clic)
+        self.battleship_grid_tk.itemconfig(canva, fill='red')
+        # print(x1,y1)
+        nearest_coord = self.battleship_grid_tk.coords(nearest)
+        print(nearest_coord)
+        self.battleship_grid_tk.coords(canva, *nearest_coord)
+
+
+    def determine_pos_from_key(self, key):
+        letter, number = key[:1], key[1:]
+        column = int(COLUNM_REF.index(letter))
+        line = int(number)
+        val = self.battleship_grid[column][line]
+        column += 1 
+        line += 1 
+        return column, line, val['canva']
+
+    def clicked(self, key):
+        column, line, canva = self.determine_pos_from_key(key)
+        self.battleship_grid_tk.itemconfig(canva, fill='black')
+        self.battleship_grid_tk.create_line(column*40-20, line*40-20, column*40+20, line*40+20, fill='red')
+        self.battleship_grid_tk.create_line(column*40+20, line*40-20, column*40-20, line*40+20, fill='red')
+        data = {
+            'type': 'game',
+            'data': {
+                'key': key,
+            },
+        }
+        self.client.send(json.dumps(data))
+        print(key)
+
     def set_data(self, data):
         self.client = Client(data['username'], data['server'], data['port'])
+        self.username = data['username']
         self.client.listen(self.handle)
 
     def send_msg(self, data):
-        self.client.send(data['msg'])
+        to_be_send = {
+            'type': 'message',
+            'data': {
+                'message': data['msg'],
+            },
+        }
+        self.client.send(to_be_send)
 
     def handle(self, msg):
-        def append():
-            self.st.configure(state='normal')
-            self.st.insert(tk.END, msg + '\n', 'msg')
-            self.st.configure(state='disabled')
-            self.st.yview(tk.END)
-        self.st.after(0, append)
+        msg_parsed = json.loads(msg)
+        if msg_parsed['username'] == self.username:
+            username = "Vous"
+            msg_type = "you" 
+        else:
+            username = msg_parsed['username'] 
+            msg_type = "msg" 
+        if msg_parsed['message']['type'] == "message":
+            message = "{} > {}".format(username, msg_parsed['message']['data']['message'])
+            def append():
+                self.st.configure(state='normal')
+                self.st.insert(tk.END, message + '\n', msg_type)
+                self.st.configure(state='disabled')
+                self.st.yview(tk.END)
+            self.st.after(0, append)
+        elif msg_parsed['message']['type'] == "join":
+            join_payload = {
+                    'type': 'join',
+                    'data': {
+                        'election': self.client.election,
+                    },
+                }
+            self.client.send(join_payload)
+            if msg_parsed['message']['data']['election'] > self.client.election and msg_parsed['username'] != self.username:
+                print("IL COMMENCE")
+            elif msg_parsed['username'] != self.username:
+                print("TU COMMENCE")
+            
+        else:
+            print(msg_parsed['message'])
 
 if __name__ == "__main__":
     app = BattleShip()
