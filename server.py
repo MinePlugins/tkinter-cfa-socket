@@ -3,12 +3,20 @@ import signal #identifie les signaux pour kill le programme
 import sys #utilisé pour sortir du programme
 import time
 from clientthread import ClientListener
+import configparser # Fichier de configuration
+
+#
+# Lecture de la configuration
+#
+
+config = configparser.ConfigParser()
+config.read('config.ini')
 
 class Server():
 
-    def __init__(self, port):
+    def __init__(self, bind, port):
         self.listener= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.listener.bind(('', port))
+        self.listener.bind((bind, int(port)))
         self.listener.listen(1)
         print("Listening on port", port)
         self.clients_sockets= []
@@ -33,7 +41,7 @@ class Server():
             time.sleep(0.1)
 
     def remove_socket(self, socket):
-        self.client_sockets.remove(socket)
+        self.clients_sockets.remove(socket)
 
     def echo(self, data):
         print("echoing:", data)
@@ -44,5 +52,5 @@ class Server():
                 print("Cannot send the message")
 
 if __name__ == "__main__":
-    server= Server(59001)
+    server= Server(config['server']['bind'], config['server']['port'])
     server.run()
