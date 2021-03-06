@@ -6,7 +6,7 @@ import tkinter.font
 import ctypes
 import json
 import configparser # Fichier de configuration
-
+import datetime
 #
 # Lecture de la configuration
 #
@@ -39,7 +39,7 @@ class BattleShip(tk.Tk):
         def onRootDeiconify(event): top.deiconify()
         self.bind("<Map>", onRootDeiconify)
         self.overrideredirect(True)
-        self.geometry('1200x480+200+200')
+        self.geometry('1280x490+200+200')
         title_bar = tk.Frame(self, bg=color_clair, relief='flat', bd=0)
         close_button = tk.Button(title_bar, 
                                     bd=0, 
@@ -89,6 +89,7 @@ class BattleShip(tk.Tk):
 class StartPage(tk.Frame):
     def __init__(self, parent, controller):
         tk.Frame.__init__(self, parent, bg=color_sombre)
+
         helv36 = tk.font.Font(family="Helvetica",size=14,weight="bold")
         self.controller = controller
         connection_text = tk.Label(self, text="Information de connection",font=helv36, bg=color_sombre, fg=color_text_clair)
@@ -132,17 +133,19 @@ class StartPage(tk.Frame):
 
 class Dialog(tk.Frame):
     def __init__(self, parent, controller):
+        self.join_time = datetime.datetime.now()
         tk.Frame.__init__(self, parent,bg=color_sombre)
         self.controller = controller
-        self.battleship_grid_tk = tk.Canvas(self, width=440, height=440,  bd=0, highlightthickness=0, bg="#010101", relief="flat")
+        self.battleship_grid_tk = tk.Canvas(self, width=560, height=440,  bd=0, highlightthickness=0, bg="#010101", relief="flat")
         self.battleship_grid_tk.grid(column=0, row=1, sticky="NSEW")
 
         self.create_grid()
         self.st = scrolledtext.ScrolledText(self, state='disabled',bg=color_sombre, fg=color_text_hightlight)
         self.st.configure(font='TkFixedFont')
-        self.st.grid(column=1, row=1, sticky='NSEW', ipadx=10, ipady=10)
+        self.st.grid(column=1, row=1, sticky='NSEW', ipadx=5, ipady=5)
         self.msg_entry = tk.Entry(self, bg=color_clair, fg=color_text_clair, relief="flat", insertbackground=color_text_clair)
-        self.msg_entry.grid(column=1, row=2,sticky="W", ipadx=50)
+        self.msg_entry.grid(column=1, row=2,sticky="W", ipadx=247)
+
         btn_column = tk.Button(self, 
                                 text="Send ->", 
                                 bg=color_clair, 
@@ -157,13 +160,24 @@ class Dialog(tk.Frame):
                                                             'msg': self.msg_entry.get(),
                                                            }))
         btn_column.grid(column=1, row=2,sticky="E")
-        self.st.tag_config('name', foreground='orange')
+
+        self.st.tag_config('sys', foreground='orange')
         self.st.tag_config('you', foreground='#2980b9')
         self.st.tag_config('msg', foreground='#3498db')
-    # def create_boat(self):
-    #     self.battleship_grid_tk.tag_bind(key,"<ButtonPress-1>",lambda e, key=key: self.move_selected(e.x, e.y, key, 0))
-    #     self.battleship_grid_tk.tag_bind(key,"<Button1-Motion>",lambda e, key=key: self.move_selected(e.x, e.y, key, 0))
-    #     self.battleship_grid_tk.tag_bind(key,"<Button1-Motion>",lambda e, key=key: self.move_selected(e.x, e.y, key, 0))
+        self.create_boat()
+
+    def create_boat(self):
+        self.battleship_grid_tk.create_rectangle(430, 20, 430+40, 20+80, fill="#f39c12",outline='#d35400', tags="bateau1")
+        self.battleship_grid_tk.create_rectangle(430, 20+85, 430+40, 20+245, fill="#2ecc71",outline='#27ae60')
+        self.battleship_grid_tk.tag_bind("bateau1","<ButtonPress-1>",lambda e: self.move_selected(e.x, e.y, e, 0))
+        self.battleship_grid_tk.tag_bind("bateau1","<Button1-Motion>",lambda e: self.move_selected(e.x, e.y, e, 0))
+        self.battleship_grid_tk.tag_bind("bateau1","<Button-2>",lambda e: print("press"))
+        self.battleship_grid_tk.tag_bind("bateau1","<Button-3>",lambda e: self.rotate(e))
+
+    def rotate(self,e):
+        coord = self.battleship_grid_tk.coords("bateau1")
+        self.battleship_grid_tk.coords("bateau1",coord[0],coord[1],coord[0]+abs(coord[1]-coord[3]),coord[3]-abs(coord[0]-coord[2]))
+        print(coord)
     def create_grid(self):
         self.battleship_grid = []
         for index_x,letter in enumerate(COLUNM_REF):
@@ -184,15 +198,17 @@ class Dialog(tk.Frame):
             self.battleship_grid.append(line)
 
     def move_selected(self, x1, y1, key, min_pixels=5):
-        column, line, canva = self.determine_pos_from_key(key)
-        print(canva)
+        print(key)
         clic=x1, y1
+        canva = self.battleship_grid_tk.coords("bateau1")
         nearest = self.battleship_grid_tk.find_closest(*clic)
-        self.battleship_grid_tk.itemconfig(canva, fill='red')
-        # print(x1,y1)
+        # self.battleship_grid_tk.itemconfig("bateau1", fill='red')
         nearest_coord = self.battleship_grid_tk.coords(nearest)
         print(nearest_coord)
-        self.battleship_grid_tk.coords(canva, *nearest_coord)
+        print(canva)
+        x = nearest_coord[0] - canva[0]
+        y = nearest_coord[1] - canva[1]
+        self.battleship_grid_tk.move("bateau1", x, y)
 
 
     def determine_pos_from_key(self, key):
@@ -230,7 +246,18 @@ class Dialog(tk.Frame):
                 'message': data['msg'],
             },
         }
-        self.client.send(to_be_send)
+        if data['msg'] == '':
+            self.show_message("Vous ne pouvez pas envoyer de message vide", "sys")
+        else:
+            self.client.send(to_be_send)
+
+    def show_message(self, msg, msg_type):
+        def append():
+            self.st.configure(state='normal')
+            self.st.insert(tk.END, msg + '\n', msg_type)
+            self.st.configure(state='disabled')
+            self.st.yview(tk.END)
+        self.st.after(0, append)
 
     def handle(self, msg):
         msg_parsed = json.loads(msg)
@@ -242,12 +269,7 @@ class Dialog(tk.Frame):
             msg_type = "msg" 
         if msg_parsed['message']['type'] == "message":
             message = "{} > {}".format(username, msg_parsed['message']['data']['message'])
-            def append():
-                self.st.configure(state='normal')
-                self.st.insert(tk.END, message + '\n', msg_type)
-                self.st.configure(state='disabled')
-                self.st.yview(tk.END)
-            self.st.after(0, append)
+            self.show_message(message, msg_type)
         elif msg_parsed['message']['type'] == "join":
             join_payload = {
                     'type': 'join',
@@ -255,7 +277,11 @@ class Dialog(tk.Frame):
                         'election': self.client.election,
                     },
                 }
-            self.client.send(join_payload)
+        
+         
+            if (self.join_time - datetime.datetime.now()).total_seconds() > 10:
+                self.join_time = datetime.datetime.now()
+                self.client.send(join_payload)
             if msg_parsed['message']['data']['election'] > self.client.election and msg_parsed['username'] != self.username:
                 print("IL COMMENCE")
             elif msg_parsed['username'] != self.username:
