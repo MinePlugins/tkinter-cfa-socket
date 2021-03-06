@@ -208,7 +208,8 @@ class Dialog(tk.Frame):
         print(canva)
         x = nearest_coord[0] - canva[0]
         y = nearest_coord[1] - canva[1]
-        self.battleship_grid_tk.move("bateau1", x, y)
+        if nearest_coord[0] > 18 and nearest_coord[1] > 18 and nearest_coord[0] < 400 and nearest_coord[1] < 400:
+            self.battleship_grid_tk.move("bateau1", x, y)
 
 
     def determine_pos_from_key(self, key):
