@@ -148,6 +148,20 @@ class Dialog(tk.Frame):
         self.draft = tk.Canvas(self, width=670, height=440)
         self.draft.delete(tk.ALL)
         self.create_grid()
+        btn_ValidGame = tk.Button(self, 
+                                    text="Valider",  
+                                    activebackground=color_clair,
+                                    activeforeground=color_text_clair,
+                                    bd=0,
+                                    overrelief='flat',
+                                    highlightcolor=color_text_hightlight,
+                                    relief="flat",
+                                    command=lambda: self.send_text({
+                                                                    'username': self.user_name_entry.get(),
+                                                                    'server':   self.server_entry.get(),
+                                                                    'port':     int(self.port_entry.get())
+                                                                    }))                          
+        btn_ValidGame.grid(column=0, row=1, sticky="SE" )
         self.st = scrolledtext.ScrolledText(self, state='disabled',bg=color_sombre, fg=color_text_hightlight, font='NotoSansMono')
         # action_man_bold = font.load('Action Man', bold=True)
         self.st.grid(column=1, row=1, sticky='NSEW')
@@ -181,7 +195,7 @@ class Dialog(tk.Frame):
             total_size = (size * 40)
             total_space = (index * 40)
             total_space += 5*(index+1)
-            self.boats.append([False, (0,0,0,0)])
+            self.boats.append([False, (0,0,0,0), tags])
             self.battleship_grid_tk.create_rectangle(430+total_space, 20, 430+40+total_space, 20+total_size, fill="#f39c12",outline='#d35400', tags=tags)
             self.battleship_grid_tk.tag_bind(tags,"<ButtonRelease-1>",lambda e, tags=tags: self.release_check(e.x, e.y, e, tags, 0))
             self.battleship_grid_tk.tag_bind(tags,"<Button1-Motion>",lambda e, tags=tags: self.move_selected(e.x, e.y, e, tags, 0))
@@ -237,6 +251,7 @@ class Dialog(tk.Frame):
                 line.append(case)
                 # self.battleship_grid_tk.tag_bind(key,"<Button-1>",lambda event, key=key: self.clicked(key))
             self.battleship_grid.append(line)
+
     def release_check(self, x1, y1, key, tags, min_pixels=5):
         clic=x1, y1
         letter, number = self.determine_boat_from_key(tags)
@@ -257,15 +272,20 @@ class Dialog(tk.Frame):
         if not "boat" in nearest:
             nearest_coord = self.draft.coords(nearest)
             # print(nearest_coord)
-            print(canva)
+            # print(canva)
             x = nearest_coord[0] - canva[0]
             y = nearest_coord[1] - canva[1]
             if nearest_coord[0] > 18 and nearest_coord[1] > 18 and nearest_coord[0] < 400 and nearest_coord[1] < 400:
                 if canva[0] < 700 and canva[1] < 400 and canva[2] < 700 and canva[3] <= 419:
                     self.battleship_grid_tk.move(tags, x, y)
                 # if canva[3] > 419:
-                    
-                #     self.battleship_grid_tk.move(tags, x, y-(abs(canva[3]-419)))
+        for boat in self.boats:
+            if boat[2] != tags:
+                cordBoad = self.battleship_grid_tk.coords(boat[2])
+                if int(canva[0]) > int(cordBoad[2]) or int(canva[2]) < int(cordBoad[0]) or int(canva[1]) > int(cordBoad[3]) or int(canva[3]) < int(cordBoad[1]):
+                    print('pas collision')
+                else:
+                    print('collision')
 
     def determine_pos_from_key(self, key):
         letter, number = key[:1], key[1:]
